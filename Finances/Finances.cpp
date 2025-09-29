@@ -1,9 +1,10 @@
-#include <iostream>
+﻿#include <iostream>
 #include <iomanip>
 #include <string>
 #include <vector>
 #include <random>
 #include <stdexcept> 
+#include <fstream>
 
 using namespace std;
 
@@ -259,12 +260,113 @@ class Wallet;
 
 class User {
 private:
-    Passport* passport;
+    Passport passport;
     Email email;
-    string password;
-    Wallet* wallet;
-public:
+    string passwordHash;
+    Wallet wallet;
 
+    string HashPassword(const string& password) {
+        string hashed = password;
+        for (char& c : hashed) c = c + 3;
+        return hashed;
+    }
+
+    string Encrypt(const string& text, char key = 'K') const {
+        string result = text;
+        for (char& c : result) c ^= key;
+        return result;
+    }
+
+    string Decrypt(const string& text, char key = 'K') const {
+        return Encrypt(text, key);
+    }
+
+public:
+    User() {}
+
+    void Register() {
+        cout << "\n=== Registration ===\n";
+        passport.SetInfo();
+        email.SetEmail();
+
+        cout << "Create password: ";
+        string pass = SetPassword();
+        passwordHash = HashPassword(pass);
+
+        cout << "\nNow setup your wallet:\n";
+        wallet.SetWallet();
+
+        cout << "Registration complete!\n";
+    }
+
+    bool Login() {
+        cout << "\n=== Login ===\n";
+        string emailInput, passInput;
+        cout << "Enter email: ";
+        cin >> emailInput;
+        cout << "Enter password: ";
+        cin >> passInput;
+
+        if (emailInput == email.emailadress && passwordHash == HashPassword(passInput)) {
+            cout << "Login successful!\n";
+            return true;
+        }
+        else {
+            cout << "Invalid email or password!\n";
+            return false;
+        }
+    }
+
+    Wallet& GetWallet() {
+        return wallet;
+    }
+
+    void SaveToFile(const string& filename) {
+        ofstream fout(filename);
+        if (!fout) {
+            cerr << "File error!\n";
+            return;
+        }
+
+        fout << Encrypt(passport.series + " " + passport.number) << endl;
+        fout << Encrypt(email.emailadress) << endl;
+        fout << Encrypt(passwordHash) << endl;
+
+        fout << Encrypt("DebitCards: " + to_string(wallet.GetDebitCount())) << endl;
+        fout << Encrypt("CreditCards: " + to_string(wallet.GetCreditCount())) << endl;
+
+        fout.close();
+        cout << "User saved to file.\n";
+    }
+
+    void LoadFromFile(const string& filename) {
+        ifstream fin(filename);
+        if (!fin) {
+            cerr << "No saved file!\n";
+            return;
+        }
+
+        string line;
+
+        getline(fin, line);
+        passport.series = Decrypt(line).substr(0, 2);
+        passport.number = Decrypt(line).substr(3);
+
+        getline(fin, line);
+        email.emailadress = Decrypt(line);
+
+        getline(fin, line);
+        passwordHash = Decrypt(line);
+
+        // wallet counts (not full restore yet, just demo)
+        getline(fin, line);
+        cout << Decrypt(line) << endl;
+        getline(fin, line);
+        cout << Decrypt(line) << endl;
+
+        fin.close();
+        cout << "User loaded from file.\n";
+    }
 };
 
 class UserChild : public User {
@@ -375,9 +477,65 @@ public:
 class Wallet {
 private:
     vector<DebitCard> debitcards;
+    DebitCard bufferdebitcard;
     vector<CreditCard> creditcards;
+    CreditCard buffercreditcard;
 public:
+    Wallet() {};
 
+    void SetWallet() {
+        string answer;
+        cout << "Do you want to add a debit card? (Yes/No): ";
+        cin >> answer;
+        if (answer == "Yes") {
+            DebitCard d;
+            d.AddCard();
+            debitcards.push_back(d);
+        }
+
+        cout << "Do you want to add a credit card? (Yes/No): ";
+        cin >> answer;
+        if (answer == "Yes") {
+            CreditCard c;
+            c.AddCard();
+            double limit;
+            cout << "Enter credit limit: ";
+            cin >> limit;
+            c.SetCreditCardInfo("Bank", CardNumber(), Date(), CVV(), limit);
+            creditcards.push_back(c);
+        }
+    }
+
+    void GetWallet() const {
+        if (debitcards.empty() && creditcards.empty()) {
+            cout << "You have no cards.\n";
+            return;
+        }
+
+        if (!debitcards.empty()) {
+            cout << "\n=== Debit Cards ===\n";
+            for (size_t i = 0; i < debitcards.size(); i++) {
+                cout << "Debit Card №" << i + 1 << ":\n";
+                debitcards[i].ShowCardInfo();
+                cout << endl;
+            }
+        }
+        else {
+            cout << "You have no debit cards.\n";
+        }
+
+        if (!creditcards.empty()) {
+            cout << "\n=== Credit Cards ===\n";
+            for (size_t i = 0; i < creditcards.size(); i++) {
+                cout << "Credit Card №" << i + 1 << ":\n";
+                creditcards[i].ShowCreditCardInfo();
+                cout << endl;
+            }
+        }
+        else {
+            cout << "You have no credit cards.\n";
+        }
+    }
 };
 
 string GeneratePassword(int length = 12) {
@@ -399,7 +557,15 @@ string GeneratePassword(int length = 12) {
     return password;
 }
 
+string SetPassword(int maxlength = 20) {
+    string password;
+    cout << "Enter password";
+    cin >> password;
+    return password;
+}
+
 int main()
 {
-    
+    ofstream fout("myfile.txt");
+
 }
