@@ -263,7 +263,7 @@ private:
     Passport passport;
     Email email;
     string passwordHash;
-    Wallet wallet;
+    Wallet* wallet;
 
     string HashPassword(const string& password) {
         string hashed = password;
@@ -282,7 +282,15 @@ private:
     }
 
 public:
+    User() {};
 
+    void Register() {
+
+    }
+
+    void Login() {
+
+    }
 };
 
 class UserChild : public User {
@@ -347,6 +355,7 @@ public:
         cout << "Expiry: " << info.duedate << endl;
         cout << "CVV: " << info.cvv.CVVvalue << endl;
         cout << "Balance: " << info.balance << " $" << endl;
+        cout << endl;
     }
 };
 
@@ -387,42 +396,35 @@ public:
         cout << "Balance: " << info.baseInfo.balance << " $" << endl;
         cout << "Credit Limit: " << info.creditLimit << " $" << endl;
         cout << "Debt: " << info.debt << " $" << endl;
+        cout << endl;
     }
 };
 
 class Wallet {
 private:
     vector<DebitCard> debitcards;
-    DebitCard bufferdebitcard;
     vector<CreditCard> creditcards;
-    CreditCard buffercreditcard;
+
 public:
-    Wallet() {};
+    Wallet() {}
 
-    void SetWallet() {
-        string answer;
-        cout << "Do you want to add a debit card? (Yes/No): ";
-        cin >> answer;
-        if (answer == "Yes") {
-            DebitCard d;
-            d.AddCard();
-            debitcards.push_back(d);
-        }
-
-        cout << "Do you want to add a credit card? (Yes/No): ";
-        cin >> answer;
-        if (answer == "Yes") {
-            CreditCard c;
-            c.AddCard();
-            double limit;
-            cout << "Enter credit limit: ";
-            cin >> limit;
-            c.SetCreditCardInfo("Bank", CardNumber(), Date(), CVV(), limit);
-            creditcards.push_back(c);
-        }
+    void AddDebitCard() {
+        DebitCard d;
+        d.AddCard();
+        debitcards.push_back(d);
     }
 
-    void GetWallet() const {
+    void AddCreditCard() {
+        CreditCard c;
+        c.AddCard();
+        double limit;
+        cout << "Enter credit limit: ";
+        cin >> limit;
+        c.SetCreditCardInfo("Bank", CardNumber(), Date(), CVV(), limit);
+        creditcards.push_back(c);
+    }
+
+    void ShowWallet() const {
         if (debitcards.empty() && creditcards.empty()) {
             cout << "You have no cards.\n";
             return;
@@ -431,13 +433,11 @@ public:
         if (!debitcards.empty()) {
             cout << "\n=== Debit Cards ===\n";
             for (size_t i = 0; i < debitcards.size(); i++) {
-                cout << "Debit Card №" << i + 1 << ":\n";
+                cout << "Debit Card #" << i + 1 << ":\n";
                 debitcards[i].ShowCardInfo();
                 cout << endl;
             }
-        }
-        else {
-            cout << "You have no debit cards.\n";
+            cout << endl;
         }
 
         if (!creditcards.empty()) {
@@ -447,9 +447,7 @@ public:
                 creditcards[i].ShowCreditCardInfo();
                 cout << endl;
             }
-        }
-        else {
-            cout << "You have no credit cards.\n";
+            cout << endl;
         }
     }
 };
@@ -482,5 +480,5 @@ string SetPassword(int maxlength = 20) {
 
 int main()
 {
-
+    
 }
