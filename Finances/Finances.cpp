@@ -282,91 +282,7 @@ private:
     }
 
 public:
-    User() {}
 
-    void Register() {
-        cout << "\n=== Registration ===\n";
-        passport.SetInfo();
-        email.SetEmail();
-
-        cout << "Create password: ";
-        string pass = SetPassword();
-        passwordHash = HashPassword(pass);
-
-        cout << "\nNow setup your wallet:\n";
-        wallet.SetWallet();
-
-        cout << "Registration complete!\n";
-    }
-
-    bool Login() {
-        cout << "\n=== Login ===\n";
-        string emailInput, passInput;
-        cout << "Enter email: ";
-        cin >> emailInput;
-        cout << "Enter password: ";
-        cin >> passInput;
-
-        if (emailInput == email.emailadress && passwordHash == HashPassword(passInput)) {
-            cout << "Login successful!\n";
-            return true;
-        }
-        else {
-            cout << "Invalid email or password!\n";
-            return false;
-        }
-    }
-
-    Wallet& GetWallet() {
-        return wallet;
-    }
-
-    void SaveToFile(const string& filename) {
-        ofstream fout(filename);
-        if (!fout) {
-            cerr << "File error!\n";
-            return;
-        }
-
-        fout << Encrypt(passport.series + " " + passport.number) << endl;
-        fout << Encrypt(email.emailadress) << endl;
-        fout << Encrypt(passwordHash) << endl;
-
-        fout << Encrypt("DebitCards: " + to_string(wallet.GetDebitCount())) << endl;
-        fout << Encrypt("CreditCards: " + to_string(wallet.GetCreditCount())) << endl;
-
-        fout.close();
-        cout << "User saved to file.\n";
-    }
-
-    void LoadFromFile(const string& filename) {
-        ifstream fin(filename);
-        if (!fin) {
-            cerr << "No saved file!\n";
-            return;
-        }
-
-        string line;
-
-        getline(fin, line);
-        passport.series = Decrypt(line).substr(0, 2);
-        passport.number = Decrypt(line).substr(3);
-
-        getline(fin, line);
-        email.emailadress = Decrypt(line);
-
-        getline(fin, line);
-        passwordHash = Decrypt(line);
-
-        // wallet counts (not full restore yet, just demo)
-        getline(fin, line);
-        cout << Decrypt(line) << endl;
-        getline(fin, line);
-        cout << Decrypt(line) << endl;
-
-        fin.close();
-        cout << "User loaded from file.\n";
-    }
 };
 
 class UserChild : public User {
@@ -566,6 +482,5 @@ string SetPassword(int maxlength = 20) {
 
 int main()
 {
-    ofstream fout("myfile.txt");
 
 }
