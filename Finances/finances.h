@@ -8,7 +8,9 @@
 #include <fstream>
 #include "sqlite3.h"
 
-using namespace std;
+using std::string;
+using std::cout;
+using std::vector;
 
 // Date
 struct Date {

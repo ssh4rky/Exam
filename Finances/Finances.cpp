@@ -315,15 +315,10 @@ User::~User() {
     if (db) sqlite3_close(db);
 }
 
+
+
 // UserChild
-class UserChild : public User {
-private:
-    Passport passport;
-    string password;
-    Wallet& wallet;
-public:
-    UserChild(Wallet& w) : wallet(w) {}
-};
+
 
 // Transaction
 Transaction::Transaction(const string& desc, double amt)
@@ -381,98 +376,107 @@ void DebitCard::ShowCardInfo() const {
 }
 
 // CreditCard
-class CreditCard : public DebitCard{
-private:
-    double creditLimit{ 0.0 };
-    double debt{ 0.0 };
-public:
-    CreditCard() : DebitCard(), creditLimit(0.0), debt(0.0) {}
-    void SetCreditCardInfo(const string& bank,
-        const CardNumber& number,
-        const Date& expiry,
-        const CVV& security,
-        double limit)
-    {
-        AddCard();
-        creditLimit = limit;
-        debt = 0.0;
-    }
+void CreditCard::SetCreditCardInfo(const string& bank,
+    const CardNumber& number,
+    const Date& expiry,
+    const CVV& security,
+    double limit)
+{
+    AddCard();
+    creditLimit = limit;
+    debt = 0.0;
+}
 
-    struct CreditInfo {
-        DebitCard::Info baseInfo;
-        double creditLimit;
-        double debt;
-    };
+CreditCard::CreditInfo CreditCard::GetCreditCardInfo() const {
+    return { GetCardInfo(), creditLimit, debt };
+}
 
-    CreditInfo GetCreditCardInfo() const {
-        return { GetCardInfo(), creditLimit, debt };
-    }
-
-    void ShowCreditCardInfo() const {
-        CreditInfo info = GetCreditCardInfo();
-        cout << "=== Credit Card Info ===" << endl;
-        cout << "Bank: " << info.baseInfo.bankname << endl;
-        cout << "Card Number: " << info.baseInfo.cardnumber << endl;
-        cout << "Expiry: " << info.baseInfo.duedate << endl;
-        cout << "CVV: " << info.baseInfo.cvv.CVVvalue << endl;
-        cout << "Balance: " << info.baseInfo.balance << " $" << endl;
-        cout << "Credit Limit: " << info.creditLimit << " $" << endl;
-        cout << "Debt: " << info.debt << " $" << endl;
-        cout << endl;
-    }
-};
+void CreditCard::ShowCreditCardInfo() const {
+    CreditInfo info = GetCreditCardInfo();
+    cout << "=== Credit Card Info ===" << endl;
+    cout << "Bank: " << info.baseInfo.bankname << endl;
+    cout << "Card Number: " << info.baseInfo.cardnumber << endl;
+    cout << "Expiry: " << info.baseInfo.duedate << endl;
+    cout << "CVV: " << info.baseInfo.cvv.CVVvalue << endl;
+    cout << "Balance: " << info.baseInfo.balance << " $" << endl;
+    cout << "Credit Limit: " << info.creditLimit << " $" << endl;
+    cout << "Debt: " << info.debt << " $" << endl;
+    cout << endl;
+}
 
 // Wallet
-class Wallet {
-private:
-    vector<DebitCard> debitcards;
-    vector<CreditCard> creditcards;
 
-public:
-    Wallet() {}
+void Wallet::AddDebitCard() {
+    DebitCard d;
+    d.AddCard();
+    debitcards.push_back(d);
+}
 
-    void AddDebitCard() {
-        DebitCard d;
-        d.AddCard();
-        debitcards.push_back(d);
+void Wallet::AddCreditCard() {
+    CreditCard c;
+    c.AddCard();
+    double limit;
+    cout << "Enter credit limit: ";
+    cin >> limit;
+    c.SetCreditCardInfo("Bank", CardNumber(), Date(), CVV(), limit);
+    creditcards.push_back(c);
+}
+
+DebitCard& Wallet::SelectDebitCard(int index) {
+
+};
+
+CreditCard& Wallet::SelectCreditCard(int index) {
+
+};
+
+void Wallet::ShowWallet() const {
+    if (debitcards.empty() && creditcards.empty()) {
+        cout << "You have no cards.\n";
+        return;
     }
 
-    void AddCreditCard() {
-        CreditCard c;
-        c.AddCard();
-        double limit;
-        cout << "Enter credit limit: ";
-        cin >> limit;
-        c.SetCreditCardInfo("Bank", CardNumber(), Date(), CVV(), limit);
-        creditcards.push_back(c);
-    }
-
-    void ShowWallet() const {
-        if (debitcards.empty() && creditcards.empty()) {
-            cout << "You have no cards.\n";
-            return;
-        }
-
-        if (!debitcards.empty()) {
-            cout << "\n=== Debit Cards ===\n";
-            for (size_t i = 0; i < debitcards.size(); i++) {
-                cout << "Debit Card #" << i + 1 << ":\n";
-                debitcards[i].ShowCardInfo();
-                cout << endl;
-            }
+    if (!debitcards.empty()) {
+        cout << "\n=== Debit Cards ===\n";
+        for (size_t i = 0; i < debitcards.size(); i++) {
+            cout << "Debit Card #" << i + 1 << ":\n";
+            debitcards[i].ShowCardInfo();
             cout << endl;
         }
+        cout << endl;
+    }
 
-        if (!creditcards.empty()) {
-            cout << "\n=== Credit Cards ===\n";
-            for (size_t i = 0; i < creditcards.size(); i++) {
-                cout << "Credit Card №" << i + 1 << ":\n";
-                creditcards[i].ShowCreditCardInfo();
-                cout << endl;
-            }
+    if (!creditcards.empty()) {
+        cout << "\n=== Credit Cards ===\n";
+        for (size_t i = 0; i < creditcards.size(); i++) {
+            cout << "Credit Card №" << i + 1 << ":\n";
+            creditcards[i].ShowCreditCardInfo();
             cout << endl;
         }
+        cout << endl;
     }
+}
+
+// Report
+double Report::GetTotalExpensesByDay(const Wallet& wallet, const Date& day) {
+
+};
+vector<Transaction> Report::GetTopExpensesWeek(const Wallet& wallet, int week, int year) {
+
+};
+double Report::GetTotalExpensesByMonth(const Wallet& wallet, int month, int year) {
+
+};
+
+vector<Transaction> Report::GetTopExpensesWeek(int week, int year) {
+
+};
+vector<string> Report::GetTopCategoriesMonth(int month, int year) {
+
+};
+
+void Report::SaveReportToFile(const string& filename, const vector<Transaction>& report) {
+
 };
 
 // Utility functions
