@@ -27,4 +27,14 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="transactions.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="users.db">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

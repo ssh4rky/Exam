@@ -3,16 +3,19 @@
 #include <string>
 #include <vector>
 #include <random>
-#include <stdexcept> 
+#include <stdexcept>
 #include <fstream>
+#include <algorithm>
+#include <sstream>
+#include <ctime>
+#include <functional>
+#include "sqlite3.h"
 
 using namespace std;
 
 // Date
 struct Date {
-    int day{ 0 };
-    int month{ 0 };
-    int year{ 0 };
+    int day{0}, month{0}, year{0};
 
     void SetMonthYear(int m, int y) {
         if (m < 1 || m > 12)
@@ -82,7 +85,7 @@ struct Date {
     }
 };
 
-//CardNumber
+// CardNumber
 struct CardNumber {
     string firstpart, secondpart, thirdpart, fourthpart;
 
@@ -115,18 +118,18 @@ struct CardNumber {
 
 // CVV
 struct CVV {
-    string CVVtype;
-    int CVVvalue;
+    string cvvtype;
+    int cvvcode;
 
     int GenerateCVV() {
-        if (CVVtype == "Dynamic") {
+        if (cvvtype == "Dynamic") {
             random_device rd;
             mt19937 gen(rd());
             uniform_int_distribution<> dist(100, 999);
-            CVVvalue = dist(gen);
-            return CVVvalue;
+            cvvcode = dist(gen);
+            return cvvcode;
         }
-        else if (CVVtype == "Static") {
+        else if (cvvtype == "Static") {
             SetCVV();
         }
         else {
@@ -136,7 +139,7 @@ struct CVV {
 
     void SetCVV() {
         cout << "Enter CVV: ";
-        cin >> CVVvalue;
+        cin >> cvvcode;
         cout << "The CVV has been succesfully changed.";
     }
 };
@@ -236,7 +239,7 @@ public:
         cin >> idnumber;
     }
 
-    void GetInfo() const {
+    void GetDBInfo() const {
         cout << "Name: " << name << endl;
         cout << "Surname: " << surname << endl;
         cout << "Patronymic: " << patronymic << endl;
@@ -256,18 +259,22 @@ class Wallet;
 // User
 class User {
 private:
-    Passport passport;
-    Email email;
-    string passwordHash;
-    Wallet* wallet;
+    vector<Wallet> wallets;
+    sqlite3* db;
+    char* errMsg = nullptr;
 
-    string HashPassword(const string& password) {
-        string hashed = password;
-    }
-
+    string HashPassword(const string& password) {};
 public:
     User() {};
 
+    Wallet& SelectWallet() {};
+    void AddWallet(const Wallet& w) {};
+
+    void Register(const string& username, const string& password) {};
+    void CheckLogin(const string& username, const string& password) {};
+    void ListWallets() {};
+
+    ~User() {};
 };
 
 // UserChild
@@ -280,16 +287,67 @@ public:
 
 // Transaction
 class Transaction {
-    string transactioncategory;
-    Date transactiondate;
+private:
+    string category;
     double amount;
+    Date date;
+    string currency;
+
+    Date& GetCurrentDate() {
+        date.SetFullDate();
+        return date;
+    };
 public:
-    Transaction(const string& desc, double amt)
-        : transactioncategory(desc), amount(amt) {
+    Transaction(const string& cat, double amt)
+        : category(cat), amount(amt), date(GetCurrentDate()) {
     }
-    void SaveToFile(const string& filename) const {
+
+    Transaction(const string& cat, double amt, const Date& dt)
+        : category(cat), amount(amt), date(dt) {
+    }
+
+    string getCategory() const { return category; }
+    double getAmount() const { return amount; }
+    Date getDate() const { return date; }
+
+    void saveToFile(const string& filename = "transactions.txt") const {
         ofstream file(filename, ios::app);
-        file << transactioncategory << " " << amount << "\n";
+        if (!file.is_open()) {
+            cerr << "Error: unable to open file" << filename << endl;
+            return;
+        }
+        file << category << ";" << amount << ";" << date << "\n";
+        file.close();
+    }
+
+    static vector<Transaction> loadFromFile(const std::string& filename = "transactions.txt") {
+        vector<Transaction> transactions;
+        ifstream file(filename);
+        if (!file.is_open()) {
+            cerr << "Error: unable to open file" << filename << endl;
+            return transactions;
+        }
+
+        std::string cat, amtStr, dt;
+        while (std::getline(file, cat, ';') &&
+            std::getline(file, amtStr, ';') &&
+            std::getline(file, dt)) {
+            double amt = std::stod(amtStr);
+            transactions.emplace_back(cat, amt, dt);
+        }
+        file.close();
+        return transactions;
+    }
+
+    void print() const {
+        std::cout << "[" << date << "] "
+            << category << " : " << amount << currency << std::endl;
+    }
+
+    static void printAll(const vector<Transaction>& transactions) {
+        for (const auto& t : transactions) {
+            t.print();
+        }
     }
 };
 
@@ -302,6 +360,7 @@ private:
     Date duedate;
     CVV cvv;
     double balance{ 0.0 };
+    vector<Transaction> transactions;
 public:
     DebitCard()
         : bankname("Monobank"),
@@ -313,6 +372,9 @@ public:
     {
     }
 
+    bool CheckBalance() {};
+    void AddTransaction(const Transaction& t) {};
+
     void AddCard() {
         cout << "Enter bank name: ";
         cin >> bankname;
@@ -322,11 +384,13 @@ public:
         duedate.SetMonthYear();
 
         cout << "Enter CVV type (Static/Dynamic): ";
-        cin >> cvv.CVVtype;
+        cin >> cvv.cvvtype;
         cvv.GenerateCVV();
 
         cout << "Card successfully added!\n";
     }
+
+    void AddBalance(double amount) {};
 
     struct Info {
         string bankname;
@@ -346,7 +410,7 @@ public:
         cout << "Bank: " << info.bankname << endl;
         cout << "Card Number: " << info.cardnumber << endl;
         cout << "Expiry: " << info.duedate << endl;
-        cout << "CVV: " << info.cvv.CVVvalue << endl;
+        cout << "CVV: " << info.cvv.cvvcode << endl;
         cout << "Balance: " << info.balance << " $" << endl;
         cout << endl;
     }
@@ -376,6 +440,8 @@ public:
         double debt;
     };
 
+    void PayDebt(double amount) {};
+
     CreditInfo GetCreditCardInfo() const {
         return { GetCardInfo(), creditLimit, debt };
     }
@@ -386,7 +452,7 @@ public:
         cout << "Bank: " << info.baseInfo.bankname << endl;
         cout << "Card Number: " << info.baseInfo.cardnumber << endl;
         cout << "Expiry: " << info.baseInfo.duedate << endl;
-        cout << "CVV: " << info.baseInfo.cvv.CVVvalue << endl;
+        cout << "CVV: " << info.baseInfo.cvv.cvvcode << endl;
         cout << "Balance: " << info.baseInfo.balance << " $" << endl;
         cout << "Credit Limit: " << info.creditLimit << " $" << endl;
         cout << "Debt: " << info.debt << " $" << endl;
@@ -399,9 +465,34 @@ class Wallet {
 private:
     vector<DebitCard> debitcards;
     vector<CreditCard> creditcards;
-public:
-    Wallet() {};
 
+public:
+    Wallet() {}
+
+    void AddDebitCard() {};
+    void AddCreditCard() {};
+
+    DebitCard& SelectDebitCard(int index) {};
+    CreditCard& SelectCreditCard(int index) {};
+
+    void ShowWallet() const {};
+
+    void SetWallet() {};
+};
+
+// Report
+class Report {
+private:
+
+public:
+    double GetTotalExpensesByDay(const Wallet& wallet, const Date& day) {};
+    vector<Transaction> GetTopExpensesWeek(const Wallet& wallet, int week, int year) {};
+    double GetTotalExpensesByMonth(const Wallet& wallet, int month, int year) {};
+
+    vector<Transaction> GetTopExpensesWeek(int week, int year) {};
+    vector<string> GetTopCategoriesMonth(int month, int year) {};
+
+    void SaveReportToFile(const string& filename, const vector<Transaction>& report) {};
 };
 
 // Utility functions
@@ -434,3 +525,4 @@ string SetPassword(int maxlength = 20) {
 int main() {
 
 }
+
